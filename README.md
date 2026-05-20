@@ -40,11 +40,11 @@ This application is designed with a clean responsive UI and production-grade arc
 - Extract equations directly from images
 - Supports handwritten and printed math expressions
 
-## 🧠 Vision Language Models
+## 🤖 Vision Language Models
 - Uses advanced multimodal AI models through Groq API
 - Intelligent equation understanding
 
-## 🧮 LaTeX Rendering
+## 🖼️ LaTeX Rendering
 - Real-time rendered mathematical output
 - Clean LaTeX generation
 
@@ -93,7 +93,7 @@ LaTeX-OCR-AI/
 
 # ⚙️ Installation
 
-## 1️⃣ Clone Repository
+## 1️ 👥 Clone Repository
 
 ```bash
 git clone https://github.com/your-username/LaTeX-OCR-AI.git
@@ -102,7 +102,7 @@ cd LaTeX-OCR-AI
 
 ---
 
-## 2️⃣ Create Virtual Environment
+## 2️ 🛠️ Create Virtual Environment
 
 ### Windows
 
@@ -120,7 +120,7 @@ source venv/bin/activate
 
 ---
 
-## 3️⃣ Install Dependencies
+## 3️ 📥 Install Dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -171,7 +171,7 @@ Rendered Mathematical Equation
 
 ---
 
-# 🧪 Example Use Cases
+# 💡 Example Use Cases
 
 ✅ Handwritten Equation Recognition  
 ✅ Mathematical Formula Digitization  
@@ -184,7 +184,7 @@ Rendered Mathematical Equation
 # 🚀 Future Enhancements
 
 - 📄 PDF Equation Extraction
-- 🧠 Multi-Equation Detection
+- 🔣 Multi-Equation Detection
 - 📊 OCR Confidence Scores
 - ☁️ Cloud Deployment
 - 📥 Export to `.tex`
@@ -256,9 +256,3 @@ If you found this project useful:
 This project is licensed under the MIT License.
 
 ---
-
-<div align="center">
-
-### 💡 Built with AI, Vision Models & Streamlit
-
-</div>

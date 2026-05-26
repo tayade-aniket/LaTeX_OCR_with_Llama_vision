@@ -4,6 +4,7 @@ from groq import Groq
 from dotenv import load_dotenv
 import os
 import base64
+import io
 
 # =========================
 # Load Environment Variables
@@ -12,24 +13,39 @@ load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-if not GROQ_API_KEY:
-    st.error("GROQ_API_KEY not found in .env file")
-    st.stop()
-
-# =========================
-# Initialize Groq Client
-# =========================
-client = Groq(api_key=GROQ_API_KEY)
-
 # =========================
 # Page Configuration
 # =========================
 st.set_page_config(
     page_title="LaTeX OCR AI",
-    page_icon="🛡️",
+    page_icon="🧮",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# =========================
+# Validate API Key
+# =========================
+if not GROQ_API_KEY:
+    st.error(
+        """
+        GROQ_API_KEY not found.
+
+        Add it in:
+        - Local .env file
+        - OR Render Environment Variables
+        """
+    )
+    st.stop()
+
+# =========================
+# Initialize Groq Client
+# =========================
+try:
+    client = Groq(api_key=GROQ_API_KEY)
+except Exception as e:
+    st.error(f"Failed to initialize Groq Client: {e}")
+    st.stop()
 
 # =========================
 # Custom CSS Styling
@@ -38,19 +54,16 @@ st.markdown(
     """
     <style>
 
-    /* Global App Styling */
     .stApp {
         background-color: #f8fafc;
         color: #111827;
     }
 
-    /* Main Container */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 2rem;
     }
 
-    /* Hero Section */
     .hero-section {
         text-align: center;
         padding: 2.5rem 1rem;
@@ -74,7 +87,6 @@ st.markdown(
         color: #4b5563;
     }
 
-    /* Card Styling */
     .custom-card {
         background: white;
         border-radius: 22px;
@@ -84,7 +96,6 @@ st.markdown(
         margin-bottom: 1rem;
     }
 
-    /* File Uploader */
     [data-testid="stFileUploader"] {
         border-radius: 18px;
         background: #f9fafb;
@@ -92,7 +103,6 @@ st.markdown(
         padding: 1rem;
     }
 
-    /* Buttons */
     .stButton > button {
         width: 100%;
         border-radius: 14px;
@@ -108,11 +118,8 @@ st.markdown(
 
     .stButton > button:hover {
         transform: translateY(-2px);
-        background: linear-gradient(135deg, #15803d, #16a34a);
-        box-shadow: 0 8px 20px rgba(34,197,94,0.35);
     }
 
-    /* Latex Render Box */
     .latex-container {
         background: #f9fafb;
         border-radius: 18px;
@@ -122,29 +129,11 @@ st.markdown(
         border: 1px solid #e5e7eb;
     }
 
-    /* Info Boxes */
-    [data-testid="stAlert"] {
-        border-radius: 16px;
-    }
-
-    /* Code Block */
-    .stCodeBlock {
-        border-radius: 18px;
-    }
-
-    /* Subheaders */
-    h3 {
-        color: #111827 !important;
-    }
-
-    /* Remove Streamlit Footer */
     footer {
         visibility: hidden;
     }
 
-    /* Responsive Design */
     @media (max-width: 768px) {
-
         .hero-title {
             font-size: 2rem;
         }
@@ -152,7 +141,6 @@ st.markdown(
         .hero-subtitle {
             font-size: 0.95rem;
         }
-
     }
 
     </style>
@@ -166,9 +154,9 @@ st.markdown(
 st.markdown(
     """
     <div class="hero-section">
-        <div class="hero-title">🛡️ LaTeX OCR AI</div>
+        <div class="hero-title">🧮 LaTeX OCR AI</div>
         <div class="hero-subtitle">
-            Extract Mathematical Equations from Images using Vision Language Models
+            Extract Mathematical Equations from Images using Groq Vision Models
         </div>
     </div>
     """,
@@ -182,7 +170,12 @@ top_col1, top_col2, top_col3 = st.columns([8, 1.2, 1.2])
 
 with top_col3:
     if st.button("🗑️ Clear"):
-        st.session_state.clear()
+        if "latex_output" in st.session_state:
+            del st.session_state["latex_output"]
+
+        if "uploaded_image" in st.session_state:
+            del st.session_state["uploaded_image"]
+
         st.rerun()
 
 # =========================
@@ -207,30 +200,45 @@ with left_col:
 
     if uploaded_file is not None:
 
-        image = Image.open(uploaded_file)
+        try:
 
-        st.image(
-            image,
-            caption="Uploaded Equation",
-            use_container_width=True
-        )
+            image = Image.open(uploaded_file)
 
-        st.markdown("<br>", unsafe_allow_html=True)
+            # Convert RGBA to RGB
+            if image.mode == "RGBA":
+                image = image.convert("RGB")
 
-        if st.button("⚡ Extract LaTeX"):
+            st.image(
+                image,
+                caption="Uploaded Equation",
+                use_container_width=True
+            )
 
-            with st.spinner("Analyzing Equation..."):
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                try:
+            if st.button("⚡ Extract LaTeX"):
 
-                    image_bytes = uploaded_file.getvalue()
+                with st.spinner("Analyzing Equation..."):
+
+                    # Convert image to bytes
+                    buffered = io.BytesIO()
+                    image.save(buffered, format="JPEG")
+
+                    image_bytes = buffered.getvalue()
+
+                    # Limit image size
+                    max_size_mb = 4
+
+                    if len(image_bytes) > max_size_mb * 1024 * 1024:
+                        st.error("Image size too large. Please upload image below 4MB.")
+                        st.stop()
 
                     encoded_image = base64.b64encode(
                         image_bytes
                     ).decode("utf-8")
 
                     response = client.chat.completions.create(
-                        model="meta-llama/llama-4-scout-17b-16e-instruct",
+                        model="llama-3.2-90b-vision-preview",
                         messages=[
                             {
                                 "role": "user",
@@ -238,19 +246,19 @@ with left_col:
                                     {
                                         "type": "text",
                                         "text": """
-You are a mathematical OCR system.
+You are an advanced mathematical OCR system.
 
-Extract the mathematical equation from the image and return ONLY valid LaTeX code.
+Extract ONLY the mathematical equation from the image.
 
 STRICT RULES:
-- Return ONLY LaTeX code
-- No explanations
+- Return ONLY valid LaTeX
 - No markdown
+- No explanations
 - No triple backticks
 - No dollar signs
-- Preserve equation structure exactly
-- Do not simplify equations
-- Do not add extra symbols
+- Preserve exact structure
+- Do not simplify
+- Do not add symbols
 """
                                     },
                                     {
@@ -262,7 +270,8 @@ STRICT RULES:
                                 ]
                             }
                         ],
-                        temperature=0
+                        temperature=0,
+                        max_tokens=300
                     )
 
                     latex_output = (
@@ -271,10 +280,21 @@ STRICT RULES:
                         .strip()
                     )
 
+                    # Clean response
+                    latex_output = (
+                        latex_output
+                        .replace("```latex", "")
+                        .replace("```", "")
+                        .replace("$", "")
+                        .strip()
+                    )
+
                     st.session_state["latex_output"] = latex_output
 
-                except Exception as e:
-                    st.error(f"Error processing image: {str(e)}")
+                    st.success("LaTeX extracted successfully!")
+
+        except Exception as e:
+            st.error(f"Error processing image: {str(e)}")
 
     else:
         st.info(
@@ -342,7 +362,7 @@ st.markdown(
         padding:1rem;
         font-size:0.95rem;
     ">
-        Made with 💖 using Streamlit, Groq API & Vision Language Models
+        Made with ❤️ using Streamlit + Groq Vision API
     </div>
     """,
     unsafe_allow_html=True
